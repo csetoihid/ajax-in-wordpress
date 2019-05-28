@@ -1,0 +1,76 @@
+1. Create a template 
+
+<?php
+/*
+Template Name: Implement Ajax
+*/
+get_header();
+?>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js" ></script>
+
+<style type="text/css">
+#content{width:auto; height:400px; margin:50px;}
+</style>
+<div id="content">
+<?php
+	wp_dropdown_categories('show_count=0&selected=-1&hierarchical=1&depth=1&hide_empty=0&exclude=1&show_option_none=Main Categories&name=main_cat');
+?>
+<select name="sub_cat" id="sub_cat" disabled="disabled"></select>
+</div>
+<?php
+get_footer();
+?>
+
+
+2. Creat js/custom.js
+jQuery(document).ready(function($) {
+	$(function(){
+		$('#main_cat').change(function(){
+			var mainCat=$('#main_cat').val();
+			alert(mainCat);
+			// call ajax
+		 	$("#sub_cat").empty();
+			$.ajax({
+				url:"../wp-admin/admin-ajax.php",
+				type:'POST',
+				data:'action=my_special_action&main_catid=' + mainCat,
+		 		success:function(results)
+		 		{
+					$("#sub_cat").removeAttr("disabled");
+					$("#sub_cat").append(results);
+				}
+	   		});
+  		});
+	});
+})
+
+
+
+3. add code to function.php
+
+add_action( 'wp_enqueue_scripts', 'add_my_script' );
+function add_my_script() {
+    wp_enqueue_script(
+        'your-script', // name your script so that you can attach other scripts and de-register, etc.
+        get_template_directory_uri() . '/js/custom.js', // this is the location of your script file
+        array('jquery') // this array lists the scripts upon which your script depends
+    );
+}
+
+function implement_ajax() {
+
+if(isset($_POST['main_catid']))
+			{
+			$categories=  get_categories('child_of='.$_POST['main_catid'].'&hide_empty=0');
+			  foreach ($categories as $cat) {
+				$option .= '<option value="'.$cat->term_id.'">';
+				$option .= $cat->cat_name;
+				$option .= ' ('.$cat->category_count.')';
+				$option .= '</option>';
+			  }
+			  echo '<option value="-1" selected="selected">Select States</option>'.$option;
+			die();
+			} // end if
+}
+add_action('wp_ajax_my_special_action', 'implement_ajax');
+add_action('wp_ajax_nopriv_my_special_action', 'implement_ajax');//for users that are not logged in.  
